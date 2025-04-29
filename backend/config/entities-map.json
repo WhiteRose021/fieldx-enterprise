@@ -1,0 +1,25 @@
+{
+    "constructions": "KataskeyesBFasi",
+    "splicing": "CSplicingWork",
+    "autopsies": "Aytopsies1",
+    "buildings": "CKtiria",
+    "malfunctions": "CVlaves",
+    "billing": "CBilling",
+    "users": "User",
+    "soilwork": "CChomatourgika",
+    "soilwork-appointment": "CEarthWork",
+    "blowing": "CEmfyshsh",
+    "construction-appointment": "CKataskeyastikadates",
+    "lastdrop": "KataskeyesFTTH",
+    "lastdrop-appointment": "CLastDropDates",
+    "master": "CMaster",
+    "autopsies-pilot": "CPilotAutopsies",
+    "blowing-appointment": "CRantevouEmf",
+    "splicing-appointment": "CSplicingdate",
+    "tobebuilt": "CTobbs",
+    "malfunction-appointment": "CVlavesAppointments",
+    "technical-inspection": "Dummy",
+    "technical-check": "Texnikoselegxos",
+    "autopsy-appointment": "Test"
+  }
+  

@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id              String           @id @default(uuid())
+  name            String
+  domain          String?          @unique
+  espoCrmUrl      String
+  espoCrmApiKey   String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  conversations   Conversation[]
+  dashboards      Dashboard[]
+  users           User[]
+  userPreferences UserPreference[]
+  viewSettings    ViewSetting[]
+  entityAnalyses    EntityAnalysis[]
+  fieldInteractions FieldInteraction[]
+  layoutFeedback    LayoutFeedback[]
+}
+
+model User {
+  id                   String                    @id @default(uuid())
+  espoCrmUserId        String                    @unique
+  email                String                    @unique
+  userName             String
+  name                 String
+  tenantId             String
+  isAdmin              Boolean                   @default(false)
+  lastLoginAt          DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  createdConversations Conversation[]            @relation("CreatedConversations")
+  conversations        ConversationParticipant[]
+  dashboards           Dashboard[]
+  messages             Message[]
+  deliveryStatus       MessageDeliveryStatus[]
+  readStatus           MessageReadStatus[]
+  notifications        Notification[]
+  refreshTokens        RefreshToken[]
+  sessions             Session[]
+  tenant               Tenant                    @relation(fields: [tenantId], references: [id])
+  devices              UserDevice[]
+  preferences          UserPreference?
+  presence             UserPresence?
+  roles                UserRole[]
+  viewSettings         ViewSetting[]
+  fieldInteractions FieldInteraction[]
+  layoutFeedback    LayoutFeedback[]
+
+  @@index([tenantId, espoCrmUserId])
+}
+
+model Role {
+  id          String     @id @default(uuid())
+  externalId  String     @unique
+  name        String
+  permissions Json
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  users       UserRole[]
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+model UserPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  tenantId             String
+  theme                String   @default("light")
+  language             String   @default("el_GR")
+  timezone             String   @default("Europe/Athens")
+  dateFormat           String   @default("YYYY-MM-DD")
+  timeFormat           String   @default("HH:mm")
+  defaultDashboardId   String?
+  notificationSettings Json?
+  customLayoutSettings Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  tenant               Tenant   @relation(fields: [tenantId], references: [id])
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Dashboard {
+  id        String   @id @default(uuid())
+  name      String
+  layout    Json
+  isDefault Boolean  @default(false)
+  userId    String
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model ViewSetting {
+  id         String   @id @default(uuid())
+  entityType String
+  viewType   String
+  settings   Json
+  userId     String
+  tenantId   String
+  isGlobal   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entityType, viewType])
+  @@index([tenantId, entityType])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  username  String
+  ip        String?
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id                 String                    @id @default(uuid())
+  name               String?
+  isGroup            Boolean                   @default(false)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  createdById        String
+  lastMessageAt      DateTime                  @default(now())
+  tenantId           String
+  lastMessagePreview String?
+  createdBy          User                      @relation("CreatedConversations", fields: [createdById], references: [id])
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id])
+  participants       ConversationParticipant[]
+  messages           Message[]
+
+  @@index([tenantId])
+  @@index([lastMessageAt])
+}
+
+model ConversationParticipant {
+  id                String       @id @default(uuid())
+  userId            String
+  conversationId    String
+  joinedAt          DateTime     @default(now())
+  leftAt            DateTime?
+  isAdmin           Boolean      @default(false)
+  lastReadMessageId String?
+  lastReadAt        DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id])
+
+  @@unique([userId, conversationId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model Message {
+  id             String                  @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  contentType    String                  @default("text")
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  status         String                  @default("sent")
+  isDeleted      Boolean                 @default(false)
+  deletedAt      DateTime?
+  replyToId      String?
+  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo        Message?                @relation("ReplyToMessage", fields: [replyToId], references: [id])
+  replies        Message[]               @relation("ReplyToMessage")
+  sender         User                    @relation(fields: [senderId], references: [id])
+  attachments    MessageAttachment[]
+  deliveredTo    MessageDeliveryStatus[]
+  readBy         MessageReadStatus[]
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+model MessageDeliveryStatus {
+  id          String   @id @default(uuid())
+  messageId   String
+  userId      String
+  deliveredAt DateTime @default(now())
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+}
+
+model MessageReadStatus {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+}
+
+model MessageAttachment {
+  id        String   @id @default(uuid())
+  messageId String
+  fileId    String
+  fileName  String
+  fileSize  Int
+  fileType  String
+  url       String
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model UserPresence {
+  userId       String   @id
+  status       String   @default("offline")
+  lastActiveAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  message   String
+  readAt    DateTime?
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, isRead])
+}
+
+model UserDevice {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceId   String
+  pushToken  String?
+  platform   String
+  lastUsedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([deviceId, userId])
+  @@index([userId])
+}
+
+model EntityAnalysis {
+  id           String   @id @default(uuid())
+  entityType   String
+  analysisData Json
+  recordCount  Int
+  tenantId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  version      Int      @default(1)
+
+  @@unique([entityType, tenantId])
+  @@index([entityType])
+  @@index([tenantId])
+}
+
+model FieldInteraction {
+  id              String   @id @default(uuid())
+  entityType      String
+  fieldName       String
+  interactionType String
+  userId          String
+  tenantId        String
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([entityType, fieldName])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model LayoutFeedback {
+  id         String   @id @default(uuid())
+  entityType String
+  layoutType String
+  feedback   String
+  comments   String?
+  userId     String
+  tenantId   String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([entityType, layoutType])
+  @@index([userId])
+  @@index([tenantId])
+}
