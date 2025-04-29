@@ -187,7 +187,7 @@ export const useMalfunctions = (
     queryKey: ['malfunctions', page, limit, searchTerm, filters, sortConfig],
     queryFn: () => fetchMalfunctions(page, limit, searchTerm, filters, sortConfig),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    keepPreviousData: true, // Keep previous data while fetching new data
+    placeholderData: undefined, // Placeholder data while fetching new data
   });
 };
 
